@@ -8,6 +8,8 @@ import { CustomButton } from '../pages/AddPet';
 import * as Yup from 'yup';
 import { Field, Form, Formik } from 'formik';
 import axios from 'axios';
+import { saveAs } from 'file-saver';
+
 export function CustomFooterStatusComponent(props) {
     return (
         <Box sx={{ p: 1, display: 'flex' }}>
@@ -44,17 +46,7 @@ const columns = [
     },
 ];
 
-const rows = [
-    { name: 'Snow', description: 'Jon', price: 35 },
-    { name: 'Lannister', description: 'Cersei', price: 42 },
-    { name: 'Lannister', description: 'Jaime', price: 45 },
-    { name: 'Stark', description: 'Arya', price: 16 },
-    { name: 'Targaryen', description: 'Daenerys', price: null },
-    { name: 'Melisandre', description: null, price: 150 },
-    { name: 'Clifford', description: 'Ferrara', price: 44 },
-    { name: 'Frances', description: 'Rossini', price: 36 },
-    { name: 'Roxie', description: 'Harvey', price: 65 },
-];
+
 const AddItemSchema = Yup.object().shape({
     name: Yup.string()
         .min(2, 'Too Short!')
@@ -72,7 +64,6 @@ const AddItemSchema = Yup.object().shape({
 });
 export default function CustomDataGrid({ data }) {
     const [status, setStatus] = React.useState('connected');
-    console.log(data.items);
     const [items, setItems] = React.useState(data?.items || [])
     console.log(items);
     const [addedItems, setAddedItems] = React.useState([])
@@ -80,30 +71,30 @@ export default function CustomDataGrid({ data }) {
     const handleOpen = () => setOpen(true);
     const handleClose = () => setOpen(false);
     const apiUrl = process.env.NODE_ENV === 'development'
-    ? process.env.REACT_APP_API_URL_LOCAL
-    : process.env.REACT_APP_API_URL_PROD;
-    console.log(process.env.NODE_ENV);
-    console.log("apiUrl=>>>>>>>>>>>>",apiUrl);
+        ? process.env.REACT_APP_API_URL_LOCAL
+        : process.env.REACT_APP_API_URL_PROD;
     const onAddExpense = () => {
         handleOpen()
     }
+    const onGenerate = async () => {
+        try {
+            const response = await fetch(`${apiUrl}/pdf/generate/${data.id}`)
+            if (!response.ok) {
+                throw new Error('Failed to fetch PDF');
+            }
+            const pdfBlob = await response.blob();
+            saveAs(pdfBlob, `bill-${data.id}.pdf`);
+        } catch (error) {
+            console.error('Error fetching or saving PDF:', error.message);
+        }
+
+
+    }
     const saveExpenses = () => {
-        // const response = fetch(`http://192.168.1.103:5000/pets/${data.id}/status`, {
-        //     method: 'patch',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: {
-        //         "items": [
-        //             {
-        //                 "name": "subh",
-        //                 "description": "test123",
-        //                 "price": 4444
-        //             }
-        //         ]
-        //     }
-        // });
+        console.log(addedItems);
         console.log(JSON.stringify(addedItems));
         axios.patch(`${apiUrl}/pets/${data.id}/status`,
-            { items: addedItems}
+            { items: addedItems }
         )
             .then(response => console.log(response.data))
             .catch(error => console.error(error));
@@ -141,7 +132,8 @@ export default function CustomDataGrid({ data }) {
             >
                 Save Expenses
             </Button>}
-
+            {items.length > 0 &&
+                <CustomButton variant='outlined' onClick={onGenerate}>Generate Report</CustomButton>}
 
             <div>
                 <Modal
